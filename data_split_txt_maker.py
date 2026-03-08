@@ -1,6 +1,6 @@
 def txt_path_fixer(txt_path='split_files/curvevel_b_train.txt'):
     old_prefix = "/projects/piml_inversion/FWIOpenData"
-    new_prefix = "/OpenFWIData"
+    new_prefix = "../OpenFWIData"
 
     #txt_file = 'split_files/curvevel_b_train.txt'
     with open(txt_path, "r") as f:
