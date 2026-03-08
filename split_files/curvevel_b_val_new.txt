@@ -1,0 +1,8 @@
+/OpenFWIData/CurveVel_B/data/data41.npy	/OpenFWIData/CurveVel_B/model/model41.npy
+/OpenFWIData/CurveVel_B/data/data42.npy	/OpenFWIData/CurveVel_B/model/model42.npy
+/OpenFWIData/CurveVel_B/data/data43.npy	/OpenFWIData/CurveVel_B/model/model43.npy
+/OpenFWIData/CurveVel_B/data/data44.npy	/OpenFWIData/CurveVel_B/model/model44.npy
+/OpenFWIData/CurveVel_B/data/data45.npy	/OpenFWIData/CurveVel_B/model/model45.npy
+/OpenFWIData/CurveVel_B/data/data46.npy	/OpenFWIData/CurveVel_B/model/model46.npy
+/OpenFWIData/CurveVel_B/data/data47.npy	/OpenFWIData/CurveVel_B/model/model47.npy
+/OpenFWIData/CurveVel_B/data/data48.npy	/OpenFWIData/CurveVel_B/model/model48.npy
