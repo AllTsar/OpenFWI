@@ -146,7 +146,7 @@ def main(args):
     if args.train_anno[-3:] == 'txt':
         dataset_train = FWIDataset(
             args.train_anno,
-            preload=False,
+            preload=True, # Might have to change if wanting to use large amount of data
             sample_ratio=args.sample_temporal,
             file_size=ctx['file_size'],
             transform_data=transform_data,
@@ -159,7 +159,7 @@ def main(args):
     if args.val_anno[-3:] == 'txt':
         dataset_valid = FWIDataset(
             args.val_anno,
-            preload=False,
+            preload=True, # Might have to change if wanting to use large amount of data
             sample_ratio=args.sample_temporal,
             file_size=ctx['file_size'],
             transform_data=transform_data,
