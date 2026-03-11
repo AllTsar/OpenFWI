@@ -1,0 +1,1 @@
+OpenFWIData/CurveVel_B/data/data49.npy	OpenFWIData/CurveVel_B/model/model49.npy
