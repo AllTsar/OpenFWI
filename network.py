@@ -172,7 +172,37 @@ class CBAM(nn.Module):
         return x
 
 
-### New InversionNet with just CBAMs added
+############################### Ringed Residual Units #############################################################
+class RRU(nn.Module):
+    def __init__(self, channels, dilation=2):
+        super().__init__()
+        pad = dilation
+
+        self.prop_conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=pad, dilation=dilation, bias=False)
+        self.prop_bn1 = nn.BatchNorm2d(channels)
+        self.prop_relu1 = nn.ReLU(inplace=True)
+
+        self.prop_conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=pad, dilation=dilation, bias=False)
+        self.prop_bn2 = nn.BatchNorm2d(channels)
+        self.shortcut = nn.Conv2d(channels, channels, kernel_size=1, bias=False)
+        self.prop_relu2 = nn.ReLU(inplace=True)
+
+        self.gate_proj = nn.Conv2d(channels, channels, kernel_size=1, bias=False)
+        self.gate_sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        y = self.prop_conv1(x)
+        y = self.prop_bn1(y)
+        y = self.prop_relu1(y)
+        y = self.prop_conv2(y)
+        y = self.prop_bn2(y)
+        y_p = self.prop_relu2(y + self.shortcut(x))
+
+        gate = self.gate_sigmoid(self.gate_proj(y_p)) + 1.0
+        return gate*x
+
+
+################################################## New InversionNet with just CBAMs added #############################
 class InversionNetCBAM(nn.Module):
     def __init__(self, dim1=32, dim2=64, dim3=128, dim4=256, dim5=512, sample_spatial=1.0, **kwargs):
         super(InversionNetCBAM, self).__init__()
@@ -247,6 +277,86 @@ class InversionNetCBAM(nn.Module):
         x = self.deconv6(x)  # (None, 1, 70, 70)
         return x
 
+###################################### InversionNetCBAM+RRU####################################
+class InversionNetCBAMRRU(nn.Module):
+    def __init__(self, dim1=32, dim2=64, dim3=128, dim4=256, dim5=512, sample_spatial=1.0, **kwargs):
+        super(InversionNetCBAMRRU).__init__()
+        self.convblock1 = ConvBlock(5, dim1, kernel_size=(7, 1), stride=(2, 1), padding=(3, 0))
+        self.convblock2_1 = ConvBlock(dim1, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock2_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.convblock3_1 = ConvBlock(dim2, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock3_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.convblock4_1 = ConvBlock(dim2, dim3, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock4_2 = ConvBlock(dim3, dim3, kernel_size=(3, 1), padding=(1, 0))
+
+        self.convblock5_1 = ConvBlock(dim3, dim3, stride=2)
+        self.rru_enc5 = RRU(dim3)
+        self.cbam_enc5 = CBAM(dim3, reduction=8)
+        self.convblock6_1 = ConvBlock(dim3, dim4, stride=2)
+        self.rru_enc6 = RRU(dim4)
+        self.cbam_enc6 = CBAM(dim4, reduction=16)
+        self.convblock7_1 = ConvBlock(dim4, dim4, stride=2)
+        self.rru_enc7 = RRU(dim4)
+        self.cbam_enc7 = CBAM(dim4, reduction=16)
+
+        self.convblock8 = ConvBlock(dim4, dim5, kernel_size=(8, ceil(70 * sample_spatial / 8)), padding=0)
+
+        self.deconv1_1 = DeconvBlock(dim5, dim5, kernel_size=5)
+        self.rru_dec1 = RRU(dim5)
+        self.cbam_dec1=CBAM(dim5, reduction=16)
+        self.deconv2_1 = DeconvBlock(dim5, dim4, kernel_size=4, stride=2, padding=1)
+        self.rru_dec2 = RRU(dim4)
+        self.cbam_dec2 = CBAM(dim4, reduction=16)
+        self.deconv3_1 = DeconvBlock(dim4, dim3, kernel_size=4, stride=2, padding=1)
+        self.rru_dec3 = RRU(dim3)
+        self.cbam_dec3 = CBAM(dim3, reduction=8)
+        self.deconv4_1 = DeconvBlock(dim3, dim2, kernel_size=4, stride=2, padding=1)
+        self.deconv4_2 = ConvBlock(dim2, dim2)
+        self.deconv5_1 = DeconvBlock(dim2, dim1, kernel_size=4, stride=2, padding=1)
+        self.deconv5_2 = ConvBlock(dim1, dim1)
+        self.deconv6 = ConvBlock_Tanh(dim1, 1)
+
+    def forward(self, x):
+        x = self.convblock1(x)
+        x = self.convblock2_1(x)
+        x = self.convblock2_2(x)
+        x = self.convblock3_1(x)
+        x = self.convblock3_2(x)
+        x = self.convblock4_1(x)
+        x = self.convblock4_2(x)
+
+        x = self.convblock5_1(x)
+        x = self.rru_enc5(x)
+        x = self.cbam_enc5(x)
+
+        x = self.convblock6_1(x)
+        x = self.rru_enc6(x)
+        x = self.cbam_enc6(x)
+
+        x = self.convblock7_1(x)
+        x = self.rru_enc7(x)
+        x = self.cbam_enc7(x)
+        x = self.convblock8(x)
+
+        x = self.deconv1_1(x)
+        x = self.rru_dec1(x)
+        x = self.cbam_dec1(x)
+
+        x = self.deconv2_1(x)
+        x = self.rru_dec2(x)
+        x = self.cbam_dec2(x)
+
+        x = self.deconv3_1(x)
+        x = self.rru_dec3(x)
+        x = self.cbam_dec3(x)
+
+        x = self.deconv4_1(x)  # (None, 64, 40, 40)
+        x = self.deconv4_2(x)  # (None, 64, 40, 40)
+        x = self.deconv5_1(x)  # (None, 32, 80, 80)
+        x = self.deconv5_2(x)  # (None, 32, 80, 80)
+        x = F.pad(x, [-5, -5, -5, -5], mode="constant", value=0)  # (None, 32, 70, 70) 125, 100
+        x = self.deconv6(x)  # (None, 1, 70, 70)
+        return x
 
 # FlatFault/CurveFault
 # 1000, 70 -> 70, 70
@@ -435,6 +545,7 @@ model_dict = {
     'InversionNet': InversionNet,
     'Discriminator': Discriminator,
     'UPFWI': FCN4_Deep_Resize_2,
-    'InversionNetCBAM': InversionNetCBAM
+    'InversionNetCBAM': InversionNetCBAM,
+    'InversionNetCBAMRRU': InversionNetCBAMRRU
 }
 
