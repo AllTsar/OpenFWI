@@ -280,7 +280,7 @@ class InversionNetCBAM(nn.Module):
 ###################################### InversionNetCBAM+RRU####################################
 class InversionNetCBAMRRU(nn.Module):
     def __init__(self, dim1=32, dim2=64, dim3=128, dim4=256, dim5=512, sample_spatial=1.0, **kwargs):
-        super(InversionNetCBAMRRU).__init__()
+        super(InversionNetCBAMRRU, self).__init__()
         self.convblock1 = ConvBlock(5, dim1, kernel_size=(7, 1), stride=(2, 1), padding=(3, 0))
         self.convblock2_1 = ConvBlock(dim1, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
         self.convblock2_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
