@@ -658,6 +658,7 @@ model_dict = {
     'Discriminator': Discriminator,
     'UPFWI': FCN4_Deep_Resize_2,
     'InversionNetCBAM': InversionNetCBAM,
-    'InversionNetCBAMRRU': InversionNetCBAMRRU
+    'InversionNetCBAMRRU': InversionNetCBAMRRU,
+    'InversionNetFFT': InversionNetFFT
 }
 
