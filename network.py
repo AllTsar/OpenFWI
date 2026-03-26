@@ -444,7 +444,7 @@ class InversionNetFFT(nn.Module):
         f = self.freq_convblock8(f)
 
         # Decoder
-        x = torch.stack([x, f], dim=1) # (B, 1024, 1, 1)
+        x = torch.cat([x, f], dim=1) # (B, 1024, 1, 1)
         x = self.bottleneck_project(x) # (B, 512, 1, 1)
 
         x = self.deconv1_1(x) # (None, 512, 5, 5)
@@ -466,7 +466,7 @@ class InversionNetFFT(nn.Module):
 
     def rfft_features(self, x):
         X = torch.fft.rfft(x, dim=2) # (B, S, N//2+1, W) complex
-        return torch.stack([X.real, X.imag], dim=1) # (B, 2S, N//2+1, W)
+        return torch.cat([X.real, X.imag], dim=1) # (B, 2S, N//2+1, W)
 
 
 
