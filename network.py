@@ -410,6 +410,9 @@ class InversionNetFFT(nn.Module):
         self.deconv6 = ConvBlock_Tanh(dim1, 1)
 
     def forward(self, x):
+        # Extract frequency features from input BEFORE running time encoder
+        f = self.rfft_features(x)
+
         # Time encoder
         x = self.convblock1(x) # (None, 32, 500, 70)
         x = self.convblock2_1(x) # (None, 64, 250, 70)
@@ -427,8 +430,6 @@ class InversionNetFFT(nn.Module):
         x = self.convblock8(x) # (None, 512, 1, 1)
 
         # Frequency encoder
-        f = self.rfft_features(x)
-
         f = self.freq_convblock2_1(f)
         f = self.freq_convblock2_2(f)
         f = self.freq_convblock3_1(f)
