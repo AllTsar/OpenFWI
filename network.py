@@ -396,7 +396,7 @@ class InversionNetFFT(nn.Module):
         self.freq_convblock8 = ConvBlock(dim4, dim5, kernel_size=(8, ceil(70 * sample_spatial / 8)), padding=0)
 
         # Decoder
-        self.bottleneck_project = ConvBlock(2*dim5, dim5, kernel_size=1)
+        self.bottleneck_project = ConvBlock(2*dim5, dim5, kernel_size=1, padding=0) # Must explicitly set padding=0 because default is 1
         self.deconv1_1 = DeconvBlock(dim5, dim5, kernel_size=5)
         self.deconv1_2 = ConvBlock(dim5, dim5)
         self.deconv2_1 = DeconvBlock(dim5, dim4, kernel_size=4, stride=2, padding=1)
@@ -411,7 +411,7 @@ class InversionNetFFT(nn.Module):
 
     def forward(self, x):
         # Extract frequency features from input BEFORE running time encoder
-        f = self.rfft_features(x)
+        f = self.rfft_features(x) #(None, 10, 501, 70)
 
         # Time encoder
         x = self.convblock1(x) # (None, 32, 500, 70)
