@@ -1,6 +1,6 @@
 def txt_path_fixer(txt_path='split_files/curvevel_b_train.txt'):
     #old_prefix = "/projects/piml_inversion/FWIOpenData"
-    old_prefix = "/OpenFWIData"
+    old_prefix = "/projects/piml_inversion/FWIOpenData"
     new_prefix = "OpenFWIData"
 
     #txt_file = 'split_files/curvevel_b_train.txt'
@@ -28,4 +28,5 @@ def train_val_splitter(txt_path='split_files', ds_name='curvevel_b'):
 
 
 if __name__ == "__main__":
-    txt_path_fixer(txt_path='split_files/curvevel_b_val.txt')
+    #txt_path_fixer(txt_path='split_files/curvefault_b_val.txt')
+    txt_path_fixer(txt_path='split_files/curvefault_b_train.txt')
