@@ -1,4 +1,4 @@
-OpenFWIData/CurveFault_B/seis6_1_0.npy    OpenFWIData/CurveFault_B/vel6_1_0.npy
+OpenFWIData/CurveFault_B/seis6_1_0.npy \t OpenFWIData/CurveFault_B/vel6_1_0.npy
 OpenFWIData/CurveFault_B/seis6_1_1.npy    OpenFWIData/CurveFault_B/vel6_1_1.npy
 OpenFWIData/CurveFault_B/seis6_1_2.np   OpenFWIData/CurveFault_B/vel6_1_2.npy
 OpenFWIData/CurveFault_B/seis6_1_3.npy	OpenFWIData/CurveFault_B/vel6_1_3.npy
