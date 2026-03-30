@@ -358,7 +358,7 @@ class InversionNetCBAMRRU(nn.Module):
         x = self.deconv6(x)  # (None, 1, 70, 70)
         return x
 
-######################## FFT ##################################################
+######################## FFT Real and Imaginary ##################################################
 
 class InversionNetFFT(nn.Module):
     def __init__(self, dim1=32, dim2=64, dim3=128, dim4=256, dim5=512, sample_spatial=1.0, **kwargs):
@@ -468,6 +468,118 @@ class InversionNetFFT(nn.Module):
     def rfft_features(self, x):
         X = torch.fft.rfft(x, dim=2) # (B, S, N//2+1, W) complex
         return torch.cat([X.real, X.imag], dim=1) # (B, 2S, N//2+1, W)
+
+
+##################################### FFT Amplitude and Phase ###############################################
+class InversionNetFFTAP(nn.Module):
+    def __init__(self, dim1=32, dim2=64, dim3=128, dim4=256, dim5=512, sample_spatial=1.0, **kwargs):
+        super(InversionNetFFTAP, self).__init__()
+
+        # Time Encoder
+        self.convblock1 = ConvBlock(5, dim1, kernel_size=(7, 1), stride=(2, 1), padding=(3, 0))
+        self.convblock2_1 = ConvBlock(dim1, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock2_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.convblock3_1 = ConvBlock(dim2, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock3_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.convblock4_1 = ConvBlock(dim2, dim3, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.convblock4_2 = ConvBlock(dim3, dim3, kernel_size=(3, 1), padding=(1, 0))
+        self.convblock5_1 = ConvBlock(dim3, dim3, stride=2)
+        self.convblock5_2 = ConvBlock(dim3, dim3)
+        self.convblock6_1 = ConvBlock(dim3, dim4, stride=2)
+        self.convblock6_2 = ConvBlock(dim4, dim4)
+        self.convblock7_1 = ConvBlock(dim4, dim4, stride=2)
+        self.convblock7_2 = ConvBlock(dim4, dim4)
+        self.convblock8 = ConvBlock(dim4, dim5, kernel_size=(8, ceil(70 * sample_spatial / 8)), padding=0)
+
+        # Frequency Encoder
+        self.freq_convblock2_1 = ConvBlock(15, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.freq_convblock2_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.freq_convblock3_1 = ConvBlock(dim2, dim2, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.freq_convblock3_2 = ConvBlock(dim2, dim2, kernel_size=(3, 1), padding=(1, 0))
+        self.freq_convblock4_1 = ConvBlock(dim2, dim3, kernel_size=(3, 1), stride=(2, 1), padding=(1, 0))
+        self.freq_convblock4_2 = ConvBlock(dim3, dim3, kernel_size=(3, 1), padding=(1, 0))
+        self.freq_convblock5_1 = ConvBlock(dim3, dim3, stride=2)
+        self.freq_convblock5_2 = ConvBlock(dim3, dim3)
+        self.freq_convblock6_1 = ConvBlock(dim3, dim4, stride=2)
+        self.freq_convblock6_2 = ConvBlock(dim4, dim4)
+        self.freq_convblock7_1 = ConvBlock(dim4, dim4, stride=2)
+        self.freq_convblock7_2 = ConvBlock(dim4, dim4)
+        self.freq_convblock8 = ConvBlock(dim4, dim5, kernel_size=(8, ceil(70 * sample_spatial / 8)), padding=0)
+
+        # Decoder
+        self.bottleneck_project = ConvBlock(2*dim5, dim5, kernel_size=1, padding=0) # Must explicitly set padding=0 because default is 1
+        self.deconv1_1 = DeconvBlock(dim5, dim5, kernel_size=5)
+        self.deconv1_2 = ConvBlock(dim5, dim5)
+        self.deconv2_1 = DeconvBlock(dim5, dim4, kernel_size=4, stride=2, padding=1)
+        self.deconv2_2 = ConvBlock(dim4, dim4)
+        self.deconv3_1 = DeconvBlock(dim4, dim3, kernel_size=4, stride=2, padding=1)
+        self.deconv3_2 = ConvBlock(dim3, dim3)
+        self.deconv4_1 = DeconvBlock(dim3, dim2, kernel_size=4, stride=2, padding=1)
+        self.deconv4_2 = ConvBlock(dim2, dim2)
+        self.deconv5_1 = DeconvBlock(dim2, dim1, kernel_size=4, stride=2, padding=1)
+        self.deconv5_2 = ConvBlock(dim1, dim1)
+        self.deconv6 = ConvBlock_Tanh(dim1, 1)
+
+    def forward(self, x):
+        # Extract frequency features from input BEFORE running time encoder
+        f = self.rfft_features(x) #(None, 15, 501, 70)
+
+        # Time encoder
+        x = self.convblock1(x) # (None, 32, 500, 70)
+        x = self.convblock2_1(x) # (None, 64, 250, 70)
+        x = self.convblock2_2(x) # (None, 64, 250, 70)
+        x = self.convblock3_1(x) # (None, 64, 125, 70)
+        x = self.convblock3_2(x) # (None, 64, 125, 70)
+        x = self.convblock4_1(x) # (None, 128, 63, 70)
+        x = self.convblock4_2(x) # (None, 128, 63, 70)
+        x = self.convblock5_1(x) # (None, 128, 32, 35)
+        x = self.convblock5_2(x) # (None, 128, 32, 35)
+        x = self.convblock6_1(x) # (None, 256, 16, 18)
+        x = self.convblock6_2(x) # (None, 256, 16, 18)
+        x = self.convblock7_1(x) # (None, 256, 8, 9)
+        x = self.convblock7_2(x) # (None, 256, 8, 9)
+        x = self.convblock8(x) # (None, 512, 1, 1)
+
+        # Frequency encoder
+        f = self.freq_convblock2_1(f)
+        f = self.freq_convblock2_2(f)
+        f = self.freq_convblock3_1(f)
+        f = self.freq_convblock3_2(f)
+        f = self.freq_convblock4_1(f)
+        f = self.freq_convblock4_2(f)
+        f = self.freq_convblock5_1(f)
+        f = self.freq_convblock5_2(f)
+        f = self.freq_convblock6_1(f)
+        f = self.freq_convblock6_2(f)
+        f = self.freq_convblock7_1(f)
+        f = self.freq_convblock7_2(f)
+        f = self.freq_convblock8(f)
+
+        # Decoder
+        x = torch.cat([x, f], dim=1) # (B, 1024, 1, 1)
+        x = self.bottleneck_project(x) # (B, 512, 1, 1)
+
+        x = self.deconv1_1(x) # (None, 512, 5, 5)
+        x = self.deconv1_2(x) # (None, 512, 5, 5)
+        x = self.deconv2_1(x) # (None, 256, 10, 10)
+        x = self.deconv2_2(x) # (None, 256, 10, 10)
+        x = self.deconv3_1(x) # (None, 128, 20, 20)
+        x = self.deconv3_2(x) # (None, 128, 20, 20)
+        x = self.deconv4_1(x) # (None, 64, 40, 40)
+        x = self.deconv4_2(x) # (None, 64, 40, 40)
+        x = self.deconv5_1(x) # (None, 32, 80, 80)
+        x = self.deconv5_2(x) # (None, 32, 80, 80)
+        x = F.pad(x, [-5, -5, -5, -5], mode="constant", value=0) # (None, 32, 70, 70) 125, 100
+        x = self.deconv6(x) # (None, 1, 70, 70)
+        return x
+
+
+    def rfft_features(self, x):
+        # The main difference from InversionNetFFT; inputting direct amplitude and phase information instead of real and imaginary components.
+        X = torch.fft.rfft(x, dim=2) # (B, S, N//2+1, W) complex
+        amplitude = X.abs()
+        phase = X.angle()
+        return torch.cat([amplitude, torch.sin(phase), torch.cos(phase)], dim=1) # (B, 3S, N//2+1, W)
 
 
 
@@ -660,6 +772,7 @@ model_dict = {
     'UPFWI': FCN4_Deep_Resize_2,
     'InversionNetCBAM': InversionNetCBAM,
     'InversionNetCBAMRRU': InversionNetCBAMRRU,
-    'InversionNetFFT': InversionNetFFT
+    'InversionNetFFT': InversionNetFFT,
+    'InversionNetFFTAP': InversionNetFFTAP
 }
 
